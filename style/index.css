@@ -1,0 +1,25 @@
+#app{
+  width: 60%;
+  margin: 0 auto;
+}
+.card{
+  min-height: 300px;
+}
+.content p{
+	font-weight: normal !important;
+}
+code{
+	background-color: gray;
+	display: inline-block;
+	margin: 0 5px;
+	padding: 0 5px;
+	border-radius: 5px;
+	color: #fff;
+}
+.title{
+  color: #fff;
+  text-align: center;
+}
+.footerp{
+  
+}

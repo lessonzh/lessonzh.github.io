@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>一首歌一个故事</title>
+  <link rel="stylesheet" href="style/index.css">
+  <link rel="stylesheet" href="style/iview.css">
+  <script type="text/javascript" src="lib/vue.js"></script>
+  <script type="text/javascript" src="lib/iview.min.js"></script>
+  <script type="text/javascript" src="lib/nebPay.js"></script>
+  <script type="text/javascript" src="lib/moment.js"></script>
+
+</head>
+<body>
+  <div id="app">
+    <i-header>
+      <h1 class="title">一首歌一个故事</h1>
+    </i-header>
+    <i-content class="content">
+      <Card>
+        <div slot="title">
+          <p>
+            　　每一首歌都有故事，每首歌都连着曾经的那个人，打动你的，除了歌声、旋律，还有歌声旋律背后那些悲欢离合，那些山盟海誓，
+          </p>
+          <p>
+              那些风花雪月，那些喜怒哀思...
+          </p>
+
+        </div>
+
+        <i-form :model="formData" :label-width="80" class="card">
+          <Row>
+            <i-col span="6" offset="6">
+              <form-item label="歌名">
+                <i-input v-model="formData.alias" @keyup.enter.native="searchAlias" placeholder="请输入歌名..."></i-input>
+              </form-item>
+            </i-col>
+            <i-col span="6">
+              <form-item>
+                <i-button type="primary" @click="searchAlias" :loading="searching">搜索</i-button>
+              </form-item>
+            </i-col>
+          </Row>
+
+          <Row>
+            <i-col span="6" offset="6">
+              <form-item label="">
+                <h4 v-show="!aliasExisted">歌名尚未注册。</h4>
+                <h4 v-show="aliasExisted">该歌名已注册。</h4>
+              </form-item>
+            </i-col>
+            <i-col span="6">
+              <form-item>
+                <i-button type="primary" @click="registerAliasFunc">填入新歌名</i-button>
+              </form-item>
+            </i-col>
+          </Row>
+
+          <Layout v-show="aliasExisted">
+            <Row>
+            <i-col span="6" offset="6">
+              <form-item label="背后的故事">
+                <p>{{formData.address}}</p>
+              </form-item>
+            </i-col>
+            <i-col span="6">
+              <form-item>
+                <i-button type="primary" @click="sendCoin">向他发送NAS</i-button>
+              </form-item>
+            </i-col>
+          </Row>
+
+          <Row>
+            <i-col span="12" offset="6">
+              <form-item label="作者">
+                <Tag checkable color="blue">{{formData.author}}</Tag>
+              </form-item>
+            </i-col>
+          </Row>
+
+          </Layout>
+
+
+        </i-form>
+      </Card>
+      <Modal
+        v-model="registerAlias"
+        title="填入歌名"
+        @on-ok="submit">
+        <i-form :model="newAlias" :label-width="80">
+          <form-item label="歌名">
+            <i-input v-model="newAlias.alias" placeholder="请输入歌名..."></i-input>
+          </form-item>
+          <form-item label="背后的故事">
+            <i-input v-model="newAlias.address" placeholder=""></i-input>
+          </form-item>
+          <!-- <form-item label="备注">
+            <i-input v-model="newAlias.motto" placeholder="请输入备注..."></i-input>
+          </form-item> -->
+        </i-form>
+      </Modal>
+
+      <Modal
+        v-model="webExtensionWalletShow"
+        title="您的浏览器不支持星云dapp!"
+        :mask-closable="false"
+        :closable="false">
+        <p>请先安装<a target="_blank" href="https://github.com/ChengOrangeJu/WebExtensionWallet">WebExtensionWallet</a></p>
+        <p slot="footer"><a @click="reload">刷新</a></p>
+      </Modal>
+    </i-content>
+    <i-footer>
+      <h4>
+        <span>
+          <Avatar src="img/creabine.jpg" shape="square" size="large" />
+        </span>
+        <span>Author: Lesson</span>
+        <span>Created in 2018/5/23</span>
+      </h4>
+    </i-footer>
+  </div>
+  <!-- <script type="text/javascript" src="js/index.js"></script> -->
+  <script type="text/javascript">
+  var NebPay = require("nebpay");
+  var nebPay = new NebPay();
+
+  let vm = new Vue({
+    el: '#app',
+    data: {
+      txhash: 'fdc49e769cff9cd5e2817e9ce9e83ebc430d83f71e2a5880cab47fed8ea8d700',
+      dappAddress: "n21jiMGWFjWhoUYXCMwXpf5oQ6HNZewuv1S",
+      aliasExisted: false,
+      webExtensionWalletShow: false,
+      searching: false,
+      registerAlias: false,
+      formData: {
+        alias: "",
+        address: "",
+        author: ""
+      },
+      newAlias: {
+        alias: "",
+        address: "",
+      }
+    },
+    computed: {
+      createdTime () {
+        if (this.formData.created === "") {
+          return ""
+        }
+        return moment(new Date(+this.formData.created)).format('YYYY-MM-DD hh:mm:ss')
+      }
+    },
+    methods: {
+      submit() {
+        if (!this.newAlias.alias || !this.newAlias.address) {
+          this.$Message.error({
+            content: '请填写完整！'
+          })
+          this.$nextTick(() =>{
+            this.registerAlias = true;
+          })
+          return
+        }
+        if (this.newAlias.address.length > 600) {
+          this.$Message.error({
+            content: '超过长度！'
+          })
+          this.$nextTick(() =>{
+            this.registerAlias = true;
+          })
+          return
+        }
+        var to = this.dappAddress;
+        var value = "0";
+        var callFunction = "save";
+        var callArgs = [this.newAlias.alias, this.newAlias.address];
+        nebPay.call(to, value, callFunction, JSON.stringify(callArgs), {    //使用nebpay的call接口去调用合约,
+            listener: this.submitCb
+        });
+      },
+      submitCb(resp) {
+        this.registerAlias = false;
+        this.$Modal.success({
+          title: '成功!',
+          content: '新加入的故事需要进行区块确认，这可能会花费几十秒钟的时间。</br>你可以在<a href="https://wallet.nasscan.io/check.html" target="_blank">https://wallet.nasscan.io/check.html</a>中</br>使用<code>'+resp.txhash+'</code>查询进度！',
+            width: 600
+        })
+      },
+      sendCoin(){
+        var to = this.formData.address;
+        var value = "0";
+        var options = {
+          // callback: this.payCb
+        };
+        nebPay.pay(to, value, options)
+      },
+      registerAliasFunc(){
+        this.registerAlias = true;
+        if (!this.aliasExisted) {
+          this.newAlias.alias = this.formData.alias;
+        }
+      },
+      searchAlias() {
+        if (typeof(webExtensionWallet) === "undefined") {
+          this.webExtensionWalletShow = true
+          return
+        }
+        if (!this.formData.alias) {
+          this.$Message.error({
+            content: '请填写要搜索的歌名！'
+          })
+          return
+        }
+        var to = this.dappAddress;
+        var value = "0";
+        var callFunction = "get";
+        var mapName = 'melodyMap'
+        // var callArgs = "[\"" + mapName + "\",\"" + this.formData.alias + "\"]"
+        var callArgs = JSON.stringify([mapName,this.formData.alias])
+        this.searching = true;
+        nebPay.simulateCall(to, value, callFunction, callArgs, {    //使用nebpay的simulateCall接口去执行get查询, 模拟执行.不发送交易,不上链
+            listener: this.searchCb    //指定回调函数
+        });
+      },
+      searchCb(resp) {
+        this.searching = false;
+        var result = resp.result;
+        if (result === "null") {
+          this.aliasNotExistedInfo();
+          this.aliasExisted = false;
+        } else {
+          this.aliasExisted = true;
+          var resultObj = JSON.parse(result);
+          this.formData.alias = resultObj.alias;
+          this.formData.address = resultObj.address;
+          this.formData.author = resultObj.author;
+          this.formData.created = this.timestampToTime(resultObj.created);
+        }
+      },
+      aliasExistedInfo() {
+        this.$Notice.info({
+          top: 50,
+          duration: 3,
+          title: '搜索成功，该歌名已存在！',
+          desc: ''
+        });
+      },
+      aliasNotExistedInfo() {
+        this.$Notice.info({
+          top: 50,
+          duration: 3,
+          title: '搜索完成，该歌名未创建！',
+          desc: ''
+        });
+      },
+      addNewAlias() {
+
+      },
+      reload() {
+        window.location.reload()
+      },
+      checkWakket() {
+        if (typeof(webExtensionWallet) === "undefined") {
+          this.webExtensionWalletShow = true
+        }
+      },
+      timestampToTime(timestamp) {
+        var date = new Date(timestamp);//时间戳为10位需*1000，时间戳为13位的话不需乘1000
+        Y = date.getFullYear() + '-';
+        M = (date.getMonth()+1 < 10 ? '0'+(date.getMonth()+1) : date.getMonth()+1) + '-';
+        D = date.getDate() + ' ';
+        h = date.getHours() + ':';
+        m = date.getMinutes() + ':';
+        s = date.getSeconds();
+        return Y+M+D+h+m+s;
+      }
+    },
+    mounted() {
+      // this.checkWakket()
+    },
+    created() {
+      console.log('aaa')
+    }
+  })
+
+  </script>
+</body>
+</html>
